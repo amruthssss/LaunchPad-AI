@@ -1,0 +1,14 @@
+.env
+.env.local
+.env.*.local
+.venv/
+__pycache__/
+**/__pycache__/
+*.pyc
+backend/chroma_db/
+backend/db/*.db
+frontend/node_modules/
+frontend/package-lock.json
+.DS_Store
+Thumbs.db
+.vscode/
