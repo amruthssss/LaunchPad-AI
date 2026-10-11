@@ -81,18 +81,26 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
             timeout=60,
         )
         search_unavailable_note = ""
-        if response.status_code == 429:
+        if response.status_code in {429, 503}:
             # Some API projects can call Gemini but do not have Search grounding
-            # quota. Retry for a tailored AI response, while making its lack of
-            # web verification explicit to the user.
-            logger.warning("Gemini Search grounding returned HTTP 429; retrying without Search")
+            # quota, and Search can be temporarily overloaded. Retry for a
+            # tailored AI response, while making its lack of web verification
+            # explicit to the user.
+            logger.warning(
+                "Gemini Search grounding returned HTTP %s; retrying without Search",
+                response.status_code,
+            )
+            search_status = response.status_code
             response = httpx.post(
                 endpoint,
                 headers={"x-goog-api-key": settings.gemini_api_key},
                 json=request,
                 timeout=60,
             )
-            search_unavailable_note = "Google Search grounding was rate-limited; this Gemini response has no verified web citations."
+            search_unavailable_note = (
+                f"Google Search grounding was unavailable (HTTP {search_status}); "
+                "this Gemini response has no verified web citations."
+            )
         response.raise_for_status()
         payload = response.json()
         text_parts = []
