@@ -1,1 +1,1 @@
-from db.database import Base, SessionLocal, engine
+"""Database models and session utilities."""
