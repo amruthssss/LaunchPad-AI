@@ -107,7 +107,11 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
     except httpx.HTTPStatusError as exc:
         status_code = exc.response.status_code
         logger.warning("Gemini market research returned HTTP %s", status_code)
-        return {"research_status": "unavailable", "research_error": f"Gemini returned HTTP {status_code}. Check the API key and model configuration."}
+        if status_code == 429:
+            message = "Gemini quota/rate limit reached, or this model is unavailable for the API project's current tier. Check Google AI Studio usage limits."
+        else:
+            message = f"Gemini returned HTTP {status_code}. Check the API key and model configuration."
+        return {"research_status": "unavailable", "research_error": message}
     except httpx.HTTPError as exc:
         logger.warning("Gemini market research request failed (%s)", type(exc).__name__)
         return {"research_status": "unavailable", "research_error": f"Gemini request failed ({type(exc).__name__})."}

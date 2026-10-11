@@ -33,7 +33,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). The API is at [http://localhost:8000](http://localhost:8000), with interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-The API uses `backend/launchpad.db` and in-memory session storage by default. Set `GEMINI_API_KEY` in `backend/.env` to enable idea-specific research with Google Search grounding; optionally set `GEMINI_MODEL` to change the model. If Gemini is not configured, the app uses heuristic research and clearly labels it. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
+The API uses `backend/launchpad.db` and in-memory session storage by default. Set `GEMINI_API_KEY` in `backend/.env` to enable idea-specific research with Google Search grounding; the default `gemini-2.5-flash` model supports grounded requests on Google's free tier. Set `GEMINI_MODEL` to change the model. If Gemini is not configured, the app uses heuristic research and clearly labels it. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
 
 ## Workflow
 
@@ -52,7 +52,7 @@ Copy `.env.example` to `backend/.env` for optional settings. The API loads `.env
 | Variable | Purpose |
 | --- | --- |
 | `GEMINI_API_KEY` | Google Search-grounded, idea-specific market research |
-| `GEMINI_MODEL` | Gemini model; defaults to `gemini-3.8-flash` |
+| `GEMINI_MODEL` | Gemini model; defaults to `gemini-2.5-flash` |
 | `OPENAI_API_KEY` | Optional fallback AI-generated research brief |
 | `DATABASE_URL` | SQLAlchemy database URL; defaults to SQLite |
 | `REDIS_URL` | Optional Redis session storage; falls back to memory |
