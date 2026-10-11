@@ -13,7 +13,11 @@ export default function MarketResearchCard() {
     ? 'Google Search grounded'
     : marketResearch.research_status === 'ungrounded'
       ? 'AI research returned without source citations'
-      : 'Heuristic research; no verified web sources'
+      : marketResearch.research_status === 'unavailable'
+        ? 'Gemini unavailable; showing industry heuristics'
+        : marketResearch.research_status === 'not_configured'
+          ? 'Gemini not configured; showing industry heuristics'
+          : 'Heuristic research; no verified web sources'
 
   return (
     <section className="rounded-3xl border border-white/10 bg-slate-950/60 p-5">

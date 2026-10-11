@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import logging
 
 import httpx
 from openai import OpenAI
 
 from config import settings
 
+logger = logging.getLogger(__name__)
 
 def optional_completion(system_prompt: str, user_prompt: str) -> str | None:
     """Best-effort OpenAI enrichment; the local heuristic workflow never depends on a key."""
@@ -102,9 +104,16 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
             "search_queries": _string_list(metadata.get("webSearchQueries")),
             "research_status": "grounded" if sources else "ungrounded",
         }
-    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
-        # Never surface request details; HTTP client errors can include sensitive headers.
-        return None
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code
+        logger.warning("Gemini market research returned HTTP %s", status_code)
+        return {"research_status": "unavailable", "research_error": f"Gemini returned HTTP {status_code}. Check the API key and model configuration."}
+    except httpx.HTTPError as exc:
+        logger.warning("Gemini market research request failed (%s)", type(exc).__name__)
+        return {"research_status": "unavailable", "research_error": f"Gemini request failed ({type(exc).__name__})."}
+    except (ValueError, KeyError, IndexError, TypeError) as exc:
+        logger.warning("Gemini market research response could not be parsed (%s)", type(exc).__name__)
+        return {"research_status": "unavailable", "research_error": "Gemini returned an invalid response."}
 
 
 def _string_list(value: object) -> list[str]:

@@ -29,19 +29,30 @@ class MarketResearchAgent:
             "You are a pragmatic startup market researcher. In 3 concise sentences, identify likely alternatives, a specific customer pain, and one assumption to validate. Do not invent market-size statistics.",
             f"Idea: {idea}\nIndustry: {industry}\nAudience: {audience}\nBusiness model: {state.get('business_model', '')}",
         )
+        has_gemini_result = bool(grounded and "research_brief" in grounded)
+        research_status = (
+            grounded.get("research_status", "ungrounded") if grounded else
+            "not_configured" if not settings.gemini_api_key else "unavailable"
+        )
+        research_error = grounded.get("research_error", "") if grounded else ""
+        fallback_brief = (
+            f"{research_error} Showing directional industry heuristics instead."
+            if research_error else
+            research or "Live web research is not configured. Add GEMINI_API_KEY to get idea-specific research with Google Search sources."
+        )
         state["market_research"] = {
-            "competitors": grounded["competitors"] if grounded else list(profile.competitors),
-            "market_size": grounded["market_size"] if grounded else summary,
+            "competitors": grounded["competitors"] if has_gemini_result and grounded["competitors"] else list(profile.competitors),
+            "market_size": grounded["market_size"] if has_gemini_result else summary,
             "research_brief": (
-                grounded["research_brief"] if grounded else
-                research or "Live web research is not configured. Add GEMINI_API_KEY to get idea-specific research with Google Search sources."
+                grounded["research_brief"] if has_gemini_result else fallback_brief
             ),
             "tam_musd": tam, "estimated_cagr_percent": profile.cagr_percent,
-            "trends": grounded["trends"] if grounded else ["AI-assisted workflows", "vertical software", "outcome-based pricing"],
-            "customer_problems": grounded["customer_problems"] if grounded else [f"{audience} face {pain}" for pain in profile.pain_points],
-            "sources": grounded["sources"] if grounded else [],
-            "search_queries": grounded["search_queries"] if grounded else [],
-            "research_status": grounded["research_status"] if grounded else "heuristic",
+            "trends": grounded["trends"] if has_gemini_result and grounded["trends"] else ["AI-assisted workflows", "vertical software", "outcome-based pricing"],
+            "customer_problems": grounded["customer_problems"] if has_gemini_result and grounded["customer_problems"] else [f"{audience} face {pain}" for pain in profile.pain_points],
+            "sources": grounded.get("sources", []) if grounded else [],
+            "search_queries": grounded.get("search_queries", []) if grounded else [],
+            "research_status": research_status,
+            "research_error": research_error,
             "assumptions": ["The displayed TAM is a heuristic directional estimate, not a sourced market figure."],
         }
         return state
