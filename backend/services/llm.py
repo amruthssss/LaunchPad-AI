@@ -48,22 +48,34 @@ Return only one valid JSON object with these keys:
 {{"research_brief":"2-4 evidence-based sentences tailored to this idea","market_size":"A sourced market-size estimate if credible evidence is available, with geography, date and definition; otherwise say evidence was not found","competitors":["3-6 real direct or adjacent competitors, with a concise differentiator after an em dash"],"trends":["3 current, specific trends relevant to this idea"],"customer_problems":["3 specific pains supported by market evidence or clearly marked as hypotheses"]}}
 
 Rules: distinguish direct competitors from substitutes; prioritize recent, relevant sources and the specified geography; do not invent figures, companies, citations, or dates; say when reliable evidence is unavailable. The UI will show citations from your grounded web results separately."""
-    # Gemini's Interactions API is the current interface for Gemini 3 and
-    # exposes Search steps and citations directly in its response.
+    # Gemini's Interactions API exposes Search steps and citations directly.
     endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions"
     try:
+        request = {
+            "model": settings.gemini_model,
+            "input": prompt,
+            # Startup ideas can be private. Keep requests out of server-side history.
+            "store": False,
+        }
         response = httpx.post(
             endpoint,
             headers={"x-goog-api-key": settings.gemini_api_key},
-            json={
-                "model": settings.gemini_model,
-                "input": prompt,
-                "tools": [{"type": "google_search"}],
-                # Startup ideas can be private. Keep requests out of server-side history.
-                "store": False,
-            },
+            json={**request, "tools": [{"type": "google_search"}]},
             timeout=60,
         )
+        search_unavailable_note = ""
+        if response.status_code == 429:
+            # Some API projects can call Gemini but do not have Search grounding
+            # quota. Retry for a tailored AI response, while making its lack of
+            # web verification explicit to the user.
+            logger.warning("Gemini Search grounding returned HTTP 429; retrying without Search")
+            response = httpx.post(
+                endpoint,
+                headers={"x-goog-api-key": settings.gemini_api_key},
+                json=request,
+                timeout=60,
+            )
+            search_unavailable_note = "Google Search grounding was rate-limited; this Gemini response has no verified web citations."
         response.raise_for_status()
         payload = response.json()
         text_parts = []
@@ -108,6 +120,7 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
             "sources": sources,
             "search_queries": list(dict.fromkeys(search_queries)),
             "research_status": "grounded" if sources else "ungrounded",
+            "research_error": search_unavailable_note,
         }
     except httpx.HTTPStatusError as exc:
         status_code = exc.response.status_code

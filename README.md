@@ -33,7 +33,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). The API is at [http://localhost:8000](http://localhost:8000), with interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-The API uses `backend/launchpad.db` and in-memory session storage by default. Set `GEMINI_API_KEY` in `backend/.env` to enable idea-specific research with Google Search grounding; the default model is `gemini-3.8-flash`. The research integration uses Gemini's Interactions API, and disables server-side interaction storage for startup ideas. Google Search grounding with Gemini 3 requires a Google API tier that supports grounding. Set `GEMINI_MODEL` to change the model. If Gemini is unavailable, the app uses heuristic research and clearly labels it. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
+The API uses `backend/launchpad.db` and in-memory session storage by default. Set `GEMINI_API_KEY` in `backend/.env` to enable idea-specific research with Google Search grounding; the default model is `gemini-3.6-flash`. The research integration uses Gemini's Interactions API, and disables server-side interaction storage for startup ideas. Google Search grounding requires a Google API tier that supports grounding. If Search grounding is rate-limited, the app retries once with Gemini without web search and labels the answer as uncited; if Gemini itself is unavailable, it uses clearly labeled directional heuristics. Set `GEMINI_MODEL` to change the model. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
 
 ## Workflow
 
@@ -52,7 +52,7 @@ Copy `.env.example` to `backend/.env` for optional settings. The API loads `.env
 | Variable | Purpose |
 | --- | --- |
 | `GEMINI_API_KEY` | Google Search-grounded, idea-specific market research |
-| `GEMINI_MODEL` | Gemini model; defaults to `gemini-3.8-flash` |
+| `GEMINI_MODEL` | Gemini model; defaults to `gemini-3.6-flash` |
 | `OPENAI_API_KEY` | Optional fallback AI-generated research brief |
 | `DATABASE_URL` | SQLAlchemy database URL; defaults to SQLite |
 | `REDIS_URL` | Optional Redis session storage; falls back to memory |

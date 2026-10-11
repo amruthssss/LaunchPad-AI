@@ -12,7 +12,7 @@ export default function MarketResearchCard() {
   const researchLabel = isGrounded
     ? 'Google Search grounded'
     : marketResearch.research_status === 'ungrounded'
-      ? 'AI research returned without source citations'
+      ? 'Gemini AI research · no web citations'
       : marketResearch.research_status === 'unavailable'
         ? 'Gemini unavailable; showing industry heuristics'
         : marketResearch.research_status === 'not_configured'
@@ -28,6 +28,7 @@ export default function MarketResearchCard() {
         <p className="mt-1 text-xs text-slate-500">Heuristic sizing; not a sourced market statistic</p>
         <p className="mt-2 text-sm leading-6 text-slate-300">{marketSize}</p>
         {marketResearch.research_brief ? <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-6 text-slate-400">{marketResearch.research_brief}</p> : null}
+        {marketResearch.research_error ? <p className="mt-3 rounded-xl border border-amber-400/20 bg-amber-400/5 p-3 text-xs leading-5 text-amber-200">{marketResearch.research_error}</p> : null}
         <div className="mt-3 flex items-center gap-2 text-xs">
           <span className={`h-2 w-2 rounded-full ${isGrounded ? 'bg-emerald-400' : 'bg-amber-400'}`} />
           <span className={isGrounded ? 'text-emerald-300' : 'text-amber-300'}>
