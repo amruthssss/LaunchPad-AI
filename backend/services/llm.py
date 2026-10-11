@@ -48,28 +48,42 @@ Return only one valid JSON object with these keys:
 {{"research_brief":"2-4 evidence-based sentences tailored to this idea","market_size":"A sourced market-size estimate if credible evidence is available, with geography, date and definition; otherwise say evidence was not found","competitors":["3-6 real direct or adjacent competitors, with a concise differentiator after an em dash"],"trends":["3 current, specific trends relevant to this idea"],"customer_problems":["3 specific pains supported by market evidence or clearly marked as hypotheses"]}}
 
 Rules: distinguish direct competitors from substitutes; prioritize recent, relevant sources and the specified geography; do not invent figures, companies, citations, or dates; say when reliable evidence is unavailable. The UI will show citations from your grounded web results separately."""
-    endpoint = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{settings.gemini_model}:generateContent"
-    )
+    # Gemini's Interactions API is the current interface for Gemini 3 and
+    # exposes Search steps and citations directly in its response.
+    endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions"
     try:
         response = httpx.post(
             endpoint,
             headers={"x-goog-api-key": settings.gemini_api_key},
             json={
-                "contents": [{"parts": [{"text": prompt}]}],
-                "tools": [{"google_search": {}}],
-                # Do not request JSON MIME mode on this endpoint: it can conflict with
-                # Google Search grounding and suppress the citation metadata we need.
-                "generationConfig": {"temperature": 0.2},
+                "model": settings.gemini_model,
+                "input": prompt,
+                "tools": [{"type": "google_search"}],
+                # Startup ideas can be private. Keep requests out of server-side history.
+                "store": False,
             },
             timeout=60,
         )
         response.raise_for_status()
         payload = response.json()
-        candidate = (payload.get("candidates") or [{}])[0]
-        parts = candidate.get("content", {}).get("parts", [])
-        text = "\n".join(part.get("text", "") for part in parts if part.get("text"))
+        text_parts = []
+        sources = []
+        seen_urls = set()
+        search_queries = []
+        for step in payload.get("steps", []):
+            if step.get("type") == "google_search_call":
+                search_queries.extend(_string_list(step.get("arguments", {}).get("queries")))
+            if step.get("type") != "model_output":
+                continue
+            for block in step.get("content", []):
+                if block.get("type") == "text" and block.get("text"):
+                    text_parts.append(block["text"])
+                for annotation in block.get("annotations", []):
+                    url = annotation.get("uri") or annotation.get("url")
+                    if url and url not in seen_urls:
+                        seen_urls.add(url)
+                        sources.append({"title": annotation.get("title") or url, "url": url})
+        text = "\n".join(text_parts)
         if not text:
             return None
         try:
@@ -85,15 +99,6 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
         if not isinstance(result, dict):
             result = {"research_brief": text}
 
-        metadata = candidate.get("groundingMetadata", {})
-        sources = []
-        seen_urls = set()
-        for chunk in metadata.get("groundingChunks", []):
-            web = chunk.get("web", {})
-            url = web.get("uri")
-            if url and url not in seen_urls:
-                seen_urls.add(url)
-                sources.append({"title": web.get("title") or url, "url": url})
         return {
             "research_brief": str(result.get("research_brief", text)),
             "market_size": str(result.get("market_size", "No sourced market-size estimate was returned.")),
@@ -101,16 +106,31 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
             "trends": _string_list(result.get("trends")),
             "customer_problems": _string_list(result.get("customer_problems")),
             "sources": sources,
-            "search_queries": _string_list(metadata.get("webSearchQueries")),
+            "search_queries": list(dict.fromkeys(search_queries)),
             "research_status": "grounded" if sources else "ungrounded",
         }
     except httpx.HTTPStatusError as exc:
         status_code = exc.response.status_code
-        logger.warning("Gemini market research returned HTTP %s", status_code)
+        try:
+            error_body = exc.response.json().get("error", {})
+        except (ValueError, AttributeError):
+            error_body = {}
+        error_code = str(error_body.get("status") or error_body.get("code") or "")
+        provider_message = str(error_body.get("message") or "").strip()
+        logger.warning(
+            "Gemini market research returned HTTP %s (%s): %s",
+            status_code,
+            error_code or "no provider code",
+            provider_message[:500] or "no provider message",
+        )
         if status_code == 429:
             message = "Gemini quota/rate limit reached, or this model is unavailable for the API project's current tier. Check Google AI Studio usage limits."
+        elif status_code == 404:
+            message = f"Gemini could not find the configured model or API endpoint. Model: {settings.gemini_model}. {provider_message}".strip()
+        elif status_code in {401, 403}:
+            message = f"Gemini rejected the API key or its permissions (HTTP {status_code}). {provider_message}".strip()
         else:
-            message = f"Gemini returned HTTP {status_code}. Check the API key and model configuration."
+            message = f"Gemini returned HTTP {status_code}. {provider_message or 'Check the Gemini API configuration.'}".strip()
         return {"research_status": "unavailable", "research_error": message}
     except httpx.HTTPError as exc:
         logger.warning("Gemini market research request failed (%s)", type(exc).__name__)

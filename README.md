@@ -10,7 +10,7 @@ The project runs locally without API keys. Built-in heuristics provide starter o
 - FastAPI API with session history, report retrieval, PDF text ingestion, and WebSocket updates.
 - LangGraph stages for market research, business planning, architecture, code generation, syntax validation, forecasting, knowledge retrieval, and deployment planning.
 - SQLite and in-memory session defaults for local development. PostgreSQL and Redis are optional.
-- Google Search-grounded market research with `GEMINI_API_KEY` (recommended).
+- Google Search-grounded market research with Gemini's Interactions API and `GEMINI_API_KEY` (recommended).
 - Optional OpenAI research brief fallback with `OPENAI_API_KEY`.
 
 ## Quick start
@@ -33,7 +33,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). The API is at [http://localhost:8000](http://localhost:8000), with interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-The API uses `backend/launchpad.db` and in-memory session storage by default. Set `GEMINI_API_KEY` in `backend/.env` to enable idea-specific research with Google Search grounding; the default model is `gemini-3.8-flash`. Google Search grounding with Gemini 3 requires a Google API tier that supports grounding. Set `GEMINI_MODEL` to change the model. If Gemini is unavailable, the app uses heuristic research and clearly labels it. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
+The API uses `backend/launchpad.db` and in-memory session storage by default. Set `GEMINI_API_KEY` in `backend/.env` to enable idea-specific research with Google Search grounding; the default model is `gemini-3.8-flash`. The research integration uses Gemini's Interactions API, and disables server-side interaction storage for startup ideas. Google Search grounding with Gemini 3 requires a Google API tier that supports grounding. Set `GEMINI_MODEL` to change the model. If Gemini is unavailable, the app uses heuristic research and clearly labels it. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
 
 ## Workflow
 
