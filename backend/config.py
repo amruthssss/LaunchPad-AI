@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     app_name: str = "LaunchPad AI"
     openai_api_key: str = ""
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.8-flash"
     database_url: str = "sqlite:///./launchpad.db"
     redis_url: str = ""
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
