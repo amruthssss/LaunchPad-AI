@@ -54,6 +54,23 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
         request = {
             "model": settings.gemini_model,
             "input": prompt,
+            "response_format": {
+                "type": "text",
+                "mime_type": "application/json",
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "research_brief": {"type": "string"},
+                        "market_size": {"type": "string"},
+                        "competitors": {"type": "array", "items": {"type": "string"}},
+                        "trends": {"type": "array", "items": {"type": "string"}},
+                        "customer_problems": {"type": "array", "items": {"type": "string"}},
+                    },
+                    "required": [
+                        "research_brief", "market_size", "competitors", "trends", "customer_problems"
+                    ],
+                },
+            },
             # Startup ideas can be private. Keep requests out of server-side history.
             "store": False,
         }
