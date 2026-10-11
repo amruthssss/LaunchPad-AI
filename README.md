@@ -2,7 +2,7 @@
 
 LaunchPad AI turns a startup idea into a practical first-pass launch plan. A live agent workflow researches the category, shapes a business model, drafts a product architecture and starter code, builds a directional forecast, and prepares a deployment checklist. Progress streams to an animated React dashboard over WebSockets.
 
-The project runs locally without API keys. Built-in research and planning heuristics provide starter outputs; adding an OpenAI key enables an AI-generated research brief. Market figures and forecasts are directional assumptions, not sourced market reports.
+The project runs locally without API keys. Built-in heuristics provide starter outputs; adding a Gemini API key enables idea-specific market research grounded in live Google Search results, with source links shown in the dashboard. Market sizing and forecasts remain directional estimates unless a sourced estimate is explicitly returned.
 
 ## What you get
 
@@ -10,7 +10,8 @@ The project runs locally without API keys. Built-in research and planning heuris
 - FastAPI API with session history, report retrieval, PDF text ingestion, and WebSocket updates.
 - LangGraph stages for market research, business planning, architecture, code generation, syntax validation, forecasting, knowledge retrieval, and deployment planning.
 - SQLite and in-memory session defaults for local development. PostgreSQL and Redis are optional.
-- Optional OpenAI research enrichment with `OPENAI_API_KEY`.
+- Google Search-grounded market research with `GEMINI_API_KEY` (recommended).
+- Optional OpenAI research brief fallback with `OPENAI_API_KEY`.
 
 ## Quick start
 
@@ -32,7 +33,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). The API is at [http://localhost:8000](http://localhost:8000), with interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-The API uses `backend/launchpad.db` and in-memory session storage by default. Set `OPENAI_API_KEY` in your environment to enable the AI research brief. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
+The API uses `backend/launchpad.db` and in-memory session storage by default. Set `GEMINI_API_KEY` in `backend/.env` to enable idea-specific research with Google Search grounding; optionally set `GEMINI_MODEL` to change the model. If Gemini is not configured, the app uses heuristic research and clearly labels it. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
 
 ## Workflow
 
@@ -50,7 +51,9 @@ Copy `.env.example` to `backend/.env` for optional settings. The API loads `.env
 
 | Variable | Purpose |
 | --- | --- |
-| `OPENAI_API_KEY` | Optional AI-generated research brief |
+| `GEMINI_API_KEY` | Google Search-grounded, idea-specific market research |
+| `GEMINI_MODEL` | Gemini model; defaults to `gemini-3.8-flash` |
+| `OPENAI_API_KEY` | Optional fallback AI-generated research brief |
 | `DATABASE_URL` | SQLAlchemy database URL; defaults to SQLite |
 | `REDIS_URL` | Optional Redis session storage; falls back to memory |
 | `CORS_ORIGINS` | Comma-separated allowed browser origins |
