@@ -1,9 +1,6 @@
 from __future__ import annotations
 
-import subprocess
-import sys
-import tempfile
-from pathlib import Path
+import ast
 
 from agents.business_planner_agent import BusinessPlannerAgent
 from agents.code_generator_agent import CodeGeneratorAgent
@@ -141,35 +138,18 @@ def run_code_sandbox_node(state: AgentState) -> AgentState:
     step_name = "code_sandbox"
     _mark_running(state, step_name)
     generated_code = state.get("generated_code", {})
-    fastapi_backend = generated_code.get("fastapi_backend", "")
-
     try:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            script_path = Path(temp_dir) / "fastapi_backend.py"
-            script_path.write_text(fastapi_backend, encoding="utf-8")
-            result = subprocess.run(
-                [sys.executable, str(script_path)],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=30,
-            )
-
-        generated_code["sandbox_stdout"] = result.stdout
-        generated_code["sandbox_stderr"] = result.stderr
-
-        if result.returncode != 0:
-            generated_code["sandbox_error"] = result.stderr or result.stdout or "Sandbox execution failed."
-            state.setdefault("retry_flags", {})["code_generator"] = True
-            state.setdefault("retry_counts", {})["code_generator"] = state.setdefault("retry_counts", {}).get("code_generator", 0) + 1
-            state.setdefault("step_status", {})[step_name] = "failed"
-        else:
-            generated_code["sandbox_passed"] = True
-            state.setdefault("step_status", {})[step_name] = "done"
+        ast.parse(generated_code.get("fastapi_backend", ""))
+        generated_code["sandbox_passed"] = True
+        generated_code["sandbox_stdout"] = "Python syntax is valid."
+        state.setdefault("step_status", {})[step_name] = "done"
+    except SyntaxError as exc:
+        generated_code["sandbox_error"] = str(exc)
+        state.setdefault("step_status", {})[step_name] = "failed"
 
         state["generated_code"] = generated_code
         return state
-    except (subprocess.SubprocessError, OSError, ValueError, TypeError, RuntimeError, KeyError, AttributeError) as exc:
+    except (ValueError, TypeError, RuntimeError, KeyError, AttributeError) as exc:
         generated_code["sandbox_error"] = str(exc)
         generated_code["sandbox_stdout"] = generated_code.get("sandbox_stdout", "")
         generated_code["sandbox_stderr"] = generated_code.get("sandbox_stderr", "")

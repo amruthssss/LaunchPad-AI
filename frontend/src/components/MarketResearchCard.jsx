@@ -6,14 +6,16 @@ export default function MarketResearchCard() {
   const competitors = marketResearch.competitors || []
   const trends = marketResearch.trends || []
   const problems = marketResearch.customer_problems || []
-  const marketSize = marketResearch.market_size || '0'
+  const marketSize = marketResearch.market_size || 'Market estimate pending'
 
   return (
     <section className="rounded-3xl border border-white/10 bg-slate-950/60 p-5">
       <h2 className="text-lg font-semibold text-white">Market Research</h2>
       <div className="mt-4 rounded-2xl border border-white/10 bg-white/5 p-4">
         <p className="text-xs uppercase tracking-[0.3em] text-slate-400">Market Size</p>
-        <p className="mt-2 text-4xl font-semibold text-cyan-300">{marketSize}</p>
+        <p className="mt-2 text-4xl font-semibold text-cyan-300">{marketResearch.tam_musd ? `$${marketResearch.tam_musd}M` : '—'}</p>
+        <p className="mt-2 text-sm leading-6 text-slate-300">{marketSize}</p>
+        {marketResearch.research_brief ? <p className="mt-3 border-t border-white/10 pt-3 text-sm leading-6 text-slate-400">{marketResearch.research_brief}</p> : null}
       </div>
 
       <div className="mt-5">

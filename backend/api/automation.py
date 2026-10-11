@@ -6,7 +6,7 @@ from automation.notion_automation import create_notion_page
 from automation.slack_automation import send_slack_message
 
 
-router = APIRouter(tags=["automation"])
+router = APIRouter(prefix="/automation", tags=["automation"])
 
 
 @router.post("/github")

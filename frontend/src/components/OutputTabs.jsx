@@ -1,13 +1,13 @@
-import { useMemo, useState } from 'react'
+import { lazy, Suspense, useMemo, useState } from 'react'
 
-import AutomationPanel from './AutomationPanel'
-import ArchitectureCard from './ArchitectureCard'
-import BusinessPlanCard from './BusinessPlanCard'
-import CodeViewer from './CodeViewer'
-import ForecastChart from './ForecastChart'
-import MarketResearchCard from './MarketResearchCard'
 import ValidationScore from './ValidationScore'
 import useStartupStore from '../store/startupStore'
+
+const ArchitectureCard = lazy(() => import('./ArchitectureCard'))
+const BusinessPlanCard = lazy(() => import('./BusinessPlanCard'))
+const CodeViewer = lazy(() => import('./CodeViewer'))
+const ForecastChart = lazy(() => import('./ForecastChart'))
+const MarketResearchCard = lazy(() => import('./MarketResearchCard'))
 
 const agentTabs = [
   { key: 'market_research', label: 'Market Research', component: MarketResearchCard },
@@ -15,7 +15,7 @@ const agentTabs = [
   { key: 'technical_architect', label: 'Architecture', component: ArchitectureCard },
   { key: 'code_generator', label: 'Code', component: () => <CodeViewer sourceKey="fastapi_backend" /> },
   { key: 'forecasting', label: 'Forecast', component: ForecastChart },
-  { key: 'deployment', label: 'Deployment', component: () => <CodeViewer sourceKey="fastapi_backend" /> },
+  { key: 'deployment', label: 'Deployment', component: () => <CodeViewer sourceKey="procfile" /> },
 ]
 
 export default function OutputTabs() {
@@ -49,12 +49,9 @@ export default function OutputTabs() {
       </div>
 
       <div className="mt-5">
-        {activeDefinition ? <ActiveComponent /> : <p className="text-sm text-slate-400">Waiting for completed agent output...</p>}
+        {activeDefinition ? <Suspense fallback={<div className="h-52 animate-pulse rounded-2xl border border-white/10 bg-white/5" />}><ActiveComponent /></Suspense> : <p className="text-sm text-slate-400">Waiting for completed agent output...</p>}
       </div>
 
-      <div className="mt-5">
-        <AutomationPanel />
-      </div>
     </section>
   )
 }

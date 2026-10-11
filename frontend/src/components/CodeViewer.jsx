@@ -19,14 +19,19 @@ const tabs = [
   { key: 'react_frontend', label: 'React Frontend', language: 'javascript' },
   { key: 'database_migrations', label: 'SQL Migrations', language: 'sql' },
   { key: 'requirements_txt', label: 'Requirements', language: 'yaml' },
+  { key: 'procfile', label: 'Procfile', language: 'yaml', source: 'deployment' },
+  { key: 'railway_toml', label: 'Railway', language: 'yaml', source: 'deployment' },
+  { key: 'github_actions_yml', label: 'GitHub Actions', language: 'yaml', source: 'deployment' },
+  { key: 'netlify_toml', label: 'Netlify', language: 'yaml', source: 'deployment' },
 ]
 
 export default function CodeViewer({ sourceKey }) {
   const generatedCode = useStartupStore((state) => state.allOutputs.generated_code || {})
+  const deploymentConfig = useStartupStore((state) => state.allOutputs.deployment_config || {})
   const [activeTab, setActiveTab] = useState(sourceKey || tabs[0].key)
 
   const activeSource = useMemo(() => tabs.find((tab) => tab.key === activeTab) || tabs[0], [activeTab])
-  const code = generatedCode[activeSource.key] || generatedCode.summary || '// Awaiting generated code...'
+  const code = (activeSource.source === 'deployment' ? deploymentConfig[activeSource.key] : generatedCode[activeSource.key]) || generatedCode.summary || '// Awaiting generated code...'
 
   const copyToClipboard = async () => {
     await navigator.clipboard.writeText(code)

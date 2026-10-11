@@ -14,7 +14,8 @@ export default function useWebSocket(sessionId) {
       return undefined
     }
 
-    const socket = new WebSocket(`ws://localhost:8000/ws/${sessionId}`)
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
+    const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws/${sessionId}`)
     socketRef.current = socket
 
     socket.onopen = () => {

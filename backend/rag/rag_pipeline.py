@@ -3,23 +3,21 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any
 
-from chromadb import HttpClient
-
-from config import settings
+_documents: dict[str, list[str]] = {}
 
 
-def build_rag_pipeline() -> HttpClient:
-    return HttpClient(host=settings.chromadb_host, port=8000)
-
-
-def query_knowledge(query: str, top_k: int = 3) -> list[str]:
-    client = build_rag_pipeline()
-    _ = client
-    return [
-        f"Knowledge chunk 1 for: {query}",
-        f"Knowledge chunk 2 for: {query}",
-        f"Knowledge chunk 3 for: {query}",
-    ][:top_k]
+def query_knowledge(query: str, top_k: int = 3, session_id: str = "") -> list[str]:
+    corpus = [
+        "Validate a painful customer problem with interviews before building a broad product.",
+        "Start with a narrow ideal customer profile, a clear value proposition, and one measurable acquisition channel.",
+        "Price against customer value, test willingness to pay, and track retention alongside acquisition.",
+        "For AI products, define human review, data retention, privacy, and fallback behavior from the start.",
+        "A strong MVP tests the riskiest business assumption with the smallest usable feature set.",
+    ] + _documents.get("shared", []) + _documents.get(session_id, [])
+    words = set(query.lower().split())
+    ranked = sorted(corpus, key=lambda item: len(words.intersection(item.lower().split())), reverse=True)
+    ranked = [item for item in ranked if words.intersection(item.lower().split())]
+    return (ranked or corpus)[:top_k]
 
 
 def load_default_knowledge() -> list[dict[str, Any]]:
@@ -31,6 +29,14 @@ def load_default_knowledge() -> list[dict[str, Any]]:
 
 
 def ingest_pdf(file_path: str, session_id: str) -> dict[str, Any]:
-    # Placeholder PDF ingestion flow; replace with parsing, chunking, and vector indexing.
     file_name = Path(file_path).name
-    return {"session_id": session_id, "file_name": file_name, "status": "ingested"}
+    try:
+        from pypdf import PdfReader
+        text = "\n".join(page.extract_text() or "" for page in PdfReader(file_path).pages)
+    except ImportError as exc:
+        raise RuntimeError("PDF support is unavailable. Install pypdf to ingest documents.") from exc
+    chunks = [text[index:index + 900].strip() for index in range(0, len(text), 800)]
+    _documents[session_id] = [chunk for chunk in chunks if chunk]
+    if not _documents[session_id]:
+        raise ValueError("No readable text was found in this PDF.")
+    return {"session_id": session_id, "file_name": file_name, "status": "ingested", "chunks": len(_documents[session_id])}

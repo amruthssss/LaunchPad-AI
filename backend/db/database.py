@@ -10,7 +10,12 @@ from config import settings
 
 DATABASE_URL = os.getenv("DATABASE_URL", settings.database_url)
 
-engine = create_engine(DATABASE_URL, pool_pre_ping=True, future=True)
+engine = create_engine(
+    DATABASE_URL,
+    pool_pre_ping=True,
+    future=True,
+    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {},
+)
 SessionLocal = sessionmaker(
     bind=engine,
     autocommit=False,

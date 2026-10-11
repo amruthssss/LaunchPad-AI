@@ -8,7 +8,8 @@ __pycache__/
 backend/chroma_db/
 backend/db/*.db
 frontend/node_modules/
-frontend/package-lock.json
+frontend/dist/
+!frontend/package-lock.json
 .DS_Store
 Thumbs.db
 .vscode/

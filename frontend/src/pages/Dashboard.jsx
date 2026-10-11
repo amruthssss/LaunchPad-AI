@@ -1,11 +1,13 @@
-import { useEffect, useMemo } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 
-import AgentGraphView from '../components/AgentGraphView'
 import AgentProgressPanel from '../components/AgentProgressPanel'
 import AutomationPanel from '../components/AutomationPanel'
 import OutputTabs from '../components/OutputTabs'
 import useWebSocket from '../hooks/useWebSocket'
 import useStartupStore from '../store/startupStore'
+import { FiArrowLeft, FiClock } from 'react-icons/fi'
+
+const AgentGraphView = lazy(() => import('../components/AgentGraphView'))
 
 function getSessionIdFromPath() {
   const parts = window.location.pathname.split('/').filter(Boolean)
@@ -21,6 +23,7 @@ export default function Dashboard() {
   const isLoading = useStartupStore((state) => state.isLoading)
 
   const sessionState = sessionId ? JSON.parse(sessionStorage.getItem(`startup:${sessionId}`) || '{}') : {}
+  const [sessionIdea, setSessionIdea] = useState(sessionState.idea || 'Untitled startup')
   const { isConnected } = useWebSocket(sessionId)
 
   useEffect(() => {
@@ -36,6 +39,10 @@ export default function Dashboard() {
         return response.json()
       })
       .then((data) => {
+        if (data.idea) {
+          setSessionIdea(data.idea)
+          sessionStorage.setItem(`startup:${sessionId}`, JSON.stringify({ ...sessionState, idea: data.idea, session_id: sessionId }))
+        }
         useStartupStore.setState({
           stepStatus: data.step_status || {},
           allOutputs: data.outputs || {},
@@ -52,7 +59,7 @@ export default function Dashboard() {
     }
   }, [resetStore])
 
-  const idea = sessionState.idea || 'Untitled Startup'
+  const idea = sessionIdea
 
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-6 text-white sm:px-6 lg:px-8">
@@ -60,6 +67,7 @@ export default function Dashboard() {
         <div className="rounded-[2rem] border border-white/10 bg-white/5 p-5 shadow-2xl shadow-cyan-950/20 backdrop-blur-xl sm:p-6">
           <div className="flex flex-col gap-3 border-b border-white/10 pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
+              <div className="mb-3 flex gap-4 text-xs text-slate-400"><a className="inline-flex items-center gap-1.5 transition hover:text-cyan-300" href="/" onClick={(event) => { event.preventDefault(); window.history.pushState({}, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')) }}><FiArrowLeft /> New idea</a><a className="inline-flex items-center gap-1.5 transition hover:text-cyan-300" href="/history" onClick={(event) => { event.preventDefault(); window.history.pushState({}, '', '/history'); window.dispatchEvent(new PopStateEvent('popstate')) }}><FiClock /> Past ideas</a></div>
               <p className="text-xs uppercase tracking-[0.45em] text-cyan-300">Session Dashboard</p>
               <h1 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">{idea}</h1>
             </div>
@@ -74,7 +82,7 @@ export default function Dashboard() {
           <div className="mt-6 grid gap-6 xl:grid-cols-[0.3fr_0.7fr]">
             <aside className="space-y-6">
               <AgentProgressPanel />
-              <AgentGraphView />
+              <Suspense fallback={<div className="h-48 animate-pulse rounded-3xl border border-white/10 bg-white/5" />}><AgentGraphView /></Suspense>
               <AutomationPanel />
             </aside>
 
@@ -85,14 +93,5 @@ export default function Dashboard() {
         </div>
       </section>
     </main>
-  )
-}export default function Dashboard() {
-  return (
-    <section className="rounded-3xl border border-white/10 bg-white/5 p-5">
-      <h2 className="text-lg font-semibold text-white">Dashboard</h2>
-      <p className="mt-3 text-sm text-slate-300">
-        A landing surface for the startup generation workflow and its agent status.
-      </p>
-    </section>
   )
 }

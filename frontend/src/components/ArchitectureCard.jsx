@@ -1,14 +1,9 @@
-import { useEffect, useMemo, useRef } from 'react'
-
-import mermaid from 'mermaid'
+import { useMemo } from 'react'
 
 import useStartupStore from '../store/startupStore'
 
-mermaid.initialize({ startOnLoad: false, theme: 'dark' })
-
 export default function ArchitectureCard() {
   const techArchitecture = useStartupStore((state) => state.allOutputs.tech_architecture || {})
-  const diagramRef = useRef(null)
   const rows = useMemo(() => {
     const entries = [
       ['Frontend', techArchitecture.frontend],
@@ -19,20 +14,6 @@ export default function ArchitectureCard() {
 
     return entries.filter((entry) => entry[1])
   }, [techArchitecture])
-
-  useEffect(() => {
-    const renderDiagram = async () => {
-      if (!diagramRef.current || !techArchitecture.mermaid_diagram) return
-      try {
-        const { svg } = await mermaid.render(`mermaid-${Date.now()}`, techArchitecture.mermaid_diagram)
-        diagramRef.current.innerHTML = svg
-      } catch {
-        diagramRef.current.innerHTML = '<p class="text-sm text-slate-400">Mermaid diagram unavailable</p>'
-      }
-    }
-
-    renderDiagram()
-  }, [techArchitecture.mermaid_diagram])
 
   return (
     <section className="rounded-3xl border border-white/10 bg-slate-950/60 p-5">
@@ -57,8 +38,24 @@ export default function ArchitectureCard() {
       </div>
 
       <div className="mt-5 rounded-2xl border border-white/10 bg-white/5 p-4">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">Mermaid Diagram</h3>
-        <div ref={diagramRef} className="overflow-x-auto text-slate-100" />
+        <h3 className="mb-3 text-sm font-semibold uppercase tracking-[0.25em] text-slate-400">How the pieces connect</h3>
+        <div className="grid gap-2 sm:grid-cols-[1fr_auto_1fr_auto_1fr] sm:items-center">
+          {[
+            ['01', 'Experience', techArchitecture.frontend || 'Product interface'],
+            ['02', 'Intelligence', `${techArchitecture.backend || 'API'} · ${techArchitecture.orchestration || 'Workflow'}`],
+            ['03', 'Foundation', techArchitecture.database || 'Persistent data'],
+          ].map(([number, title, detail], index) => (
+            <div key={number} className="contents">
+              <div className="min-w-0 rounded-xl border border-white/10 bg-slate-950/60 p-3 transition hover:border-cyan-300/35">
+                <span className="text-[9px] font-semibold tracking-widest text-cyan-300">{number}</span>
+                <h4 className="mt-2 text-xs font-semibold text-white">{title}</h4>
+                <p className="mt-1 text-[10px] leading-5 text-slate-400">{detail}</p>
+              </div>
+              {index < 2 ? <span className="hidden text-center text-cyan-300 sm:block">→</span> : null}
+            </div>
+          ))}
+        </div>
+        {techArchitecture.summary ? <p className="mt-3 text-xs leading-5 text-slate-400">{techArchitecture.summary}</p> : null}
       </div>
     </section>
   )

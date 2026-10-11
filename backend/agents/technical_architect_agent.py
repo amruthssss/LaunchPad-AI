@@ -1,57 +1,19 @@
 from __future__ import annotations
 
-from langchain.prompts import ChatPromptTemplate
-from langchain.chat_models import ChatOpenAI
-
 from models.state import AgentState
 
 
 class TechnicalArchitectAgent:
-    def __init__(self) -> None:
-        self.llm = ChatOpenAI(model="gpt-4o", temperature=0)
-
     def run(self, state: AgentState) -> AgentState:
-        prompt = ChatPromptTemplate.from_messages(
-            [
-                (
-                    "system",
-                    "Design a startup platform architecture. Include frontend, backend, database, deployment, schema, endpoints, and a Mermaid diagram.",
-                ),
-                ("human", "Idea: {idea}\nBusiness plan: {business_plan}"),
-            ]
-        )
-
-        response = self.llm.invoke(
-            prompt.format_messages(
-                idea=state.get("idea", "Unknown startup idea"),
-                business_plan=state.get("business_plan", {}),
-            )
-        )
-        architecture_summary = getattr(response, "content", "") or "Proposed architecture ready."
-
         state["tech_architecture"] = {
-            "frontend": "React, Vite, Tailwind CSS, React Flow",
-            "backend": "Python, FastAPI, LangGraph, LangChain, OpenAI GPT-4",
-            "database": "PostgreSQL, Redis, ChromaDB",
-            "deployment": "Docker and Docker Compose",
-            "db_schema": {
-                "startup_runs": ["id", "idea", "industry", "status", "created_at"],
-                "agent_outputs": ["id", "startup_run_id", "agent_name", "payload"],
-            },
-            "api_endpoints": [
-                "POST /api/startup/run",
-                "GET /api/startup/sample",
-                "WS /api/startup/ws/{startup_name}",
-            ],
-            "mermaid_diagram": (
-                "flowchart LR\n"
-                "  UI[React Frontend] --> API[FastAPI Backend]\n"
-                "  API --> PG[(PostgreSQL)]\n"
-                "  API --> REDIS[(Redis)]\n"
-                "  API --> CHROMA[(ChromaDB)]\n"
-                "  API --> ML[MLflow]"
-            ),
-            "summary": architecture_summary,
+            "frontend": "React 18 + Vite + Tailwind CSS",
+            "backend": "FastAPI REST API + LangGraph orchestration",
+            "database": "PostgreSQL in production; SQLite for local development",
+            "cache": "Redis (optional; in-memory fallback for local development)",
+            "deployment": "Independent web hosting with a managed PostgreSQL service",
+            "db_schema": {"startup_sessions": ["id", "idea", "industry", "status", "config", "final_report", "created_at"]},
+            "api_endpoints": ["POST /api/startup/generate", "GET /api/startup/{id}/status", "GET /api/startup/{id}/report", "GET /api/startup/history", "WS /ws/{id}"],
+            "mermaid_diagram": "flowchart LR\n  UI[React dashboard] --> API[FastAPI]\n  API --> GRAPH[LangGraph pipeline]\n  API --> DB[(PostgreSQL / SQLite)]\n  API --> CACHE[(Redis / memory)]",
+            "summary": "A modular web application with a streaming agent workflow, durable session records, and graceful local-development defaults.",
         }
-        state.setdefault("step_status", {})["tech_architecture"] = "done"
         return state

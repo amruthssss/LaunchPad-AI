@@ -70,12 +70,20 @@ async def generate_startup(request: StartupGenerateRequest, db: Session = Depend
 
 
 @router.get("/{session_id}/status", response_model=StartupStatusResponse)
-async def get_status(session_id: str) -> StartupStatusResponse:
+async def get_status(session_id: str, db: Session = Depends(get_db)) -> StartupStatusResponse:
     state = get_state(session_id)
     if not state:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        try:
+            row = db.query(StartupSession).filter(StartupSession.id == UUID(session_id)).one_or_none()
+        except ValueError:
+            row = None
+        state = row.final_report if row and row.final_report else ({**row.config, "session_id": session_id, "step_status": {}} if row else None)
+        if not state:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+        set_state(session_id, state)
     return StartupStatusResponse(
         session_id=session_id,
+        idea=state.get("idea", ""),
         step_status=state.get("step_status", {}),
         outputs=_extract_outputs(state),
     )
@@ -83,34 +91,41 @@ async def get_status(session_id: str) -> StartupStatusResponse:
 
 @router.post("/{session_id}/upload-pdf")
 async def upload_pdf(session_id: str, file: UploadFile = File(...)) -> dict:
-    if file.content_type not in {"application/pdf", "application/x-pdf"} and not file.filename.lower().endswith(".pdf"):
+    if not get_state(session_id):
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
+    if file.content_type not in {"application/pdf", "application/x-pdf"} and not (file.filename or "").lower().endswith(".pdf"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="PDF files only")
 
+    content = await file.read(15 * 1024 * 1024 + 1)
+    if len(content) > 15 * 1024 * 1024:
+        raise HTTPException(status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, detail="PDF must be smaller than 15 MB")
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pdf") as temp_file:
-        temp_file.write(await file.read())
+        temp_file.write(content)
         temp_path = temp_file.name
 
     try:
-        ingest_pdf(temp_path, session_id)
+        try:
+            result = ingest_pdf(temp_path, session_id)
+        except (ValueError, RuntimeError) as exc:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     finally:
         if os.path.exists(temp_path):
             os.remove(temp_path)
-    return {"message": "PDF ingested successfully"}
+    return {"message": "PDF ingested successfully", **result}
 
 
 @router.get("/{session_id}/report")
 async def get_report(session_id: str, db: Session = Depends(get_db)) -> dict:
     state = get_state(session_id)
-    if not state:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-
-    session_row = db.query(StartupSession).filter(StartupSession.id == UUID(session_id)).one_or_none()
-    if session_row is not None:
-        session_row.final_report = state
-        session_row.status = "completed"
-        db.commit()
-
-    return state
+    try:
+        session_row = db.query(StartupSession).filter(StartupSession.id == UUID(session_id)).one_or_none()
+    except ValueError:
+        session_row = None
+    if session_row and session_row.final_report:
+        return session_row.final_report
+    if state:
+        return state
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
 
 
 @router.get("/history", response_model=list[StartupHistoryItem])

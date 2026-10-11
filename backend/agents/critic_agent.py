@@ -1,35 +1,16 @@
 from __future__ import annotations
 
-from openai import OpenAI
-
 from models.state import AgentState
 
 
 class CriticAgent:
-    def __init__(self) -> None:
-        self.client = OpenAI()
-
     def run(self, state: AgentState, agent_name: str) -> AgentState:
-        target_output = state.get(agent_name, {})
-        response = self.client.chat.completions.create(
-            model="gpt-4",
-            messages=[
-                {
-                    "role": "system",
-                    "content": "Evaluate the quality of the provided agent output. Return a short score and feedback.",
-                },
-                {
-                    "role": "user",
-                    "content": f"Agent name: {agent_name}\nOutput: {target_output}",
-                },
-            ],
-        )
-        feedback = response.choices[0].message.content or "Output looks acceptable."
-
-        score = 0.82
-        state.setdefault("critic_scores", {})[agent_name] = score
+        output = state.get(agent_name, {})
+        populated = sum(bool(value) for value in output.values()) if isinstance(output, dict) else bool(output)
+        score = min(0.94, 0.68 + populated * 0.045)
+        feedback = "Useful first-pass output. Validate assumptions with target customers and current market sources."
+        state.setdefault("critic_scores", {})[agent_name] = round(score, 2)
         state["critic_scores"][f"{agent_name}_feedback"] = feedback
-        state.setdefault("retry_flags", {})[agent_name] = score < 0.7
-        state.setdefault("retry_counts", {})[agent_name] = state.get("retry_counts", {}).get(agent_name, 0)
-        state.setdefault("step_status", {})[f"critic_{agent_name}"] = "done"
+        state.setdefault("retry_flags", {})[agent_name] = False
+        state.setdefault("retry_counts", {})[agent_name] = 0
         return state

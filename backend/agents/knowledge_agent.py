@@ -13,7 +13,7 @@ class KnowledgeAgent:
                 state.get("target_audience", ""),
             ]
         ).strip()
-        knowledge_chunks = query_knowledge(query=query or "startup best practices", top_k=3)
+        knowledge_chunks = query_knowledge(query=query or "startup best practices", top_k=3, session_id=state.get("session_id", ""))
 
         state.setdefault("business_plan", {})["knowledge_context"] = knowledge_chunks[:3]
         state.setdefault("step_status", {})["knowledge"] = "done"

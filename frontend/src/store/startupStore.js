@@ -20,12 +20,11 @@ const useStartupStore = create((set) => ({
       },
     })),
   updateOutputs: (step, output) =>
-    set((state) => ({
-      allOutputs: {
-        ...state.allOutputs,
-        [step]: output,
-      },
-    })),
+    set((state) => {
+      const knownOutputs = ['market_research', 'business_plan', 'tech_architecture', 'generated_code', 'forecast', 'deployment_config', 'critic_scores']
+      const looksLikeState = output && knownOutputs.some((key) => Object.hasOwn(output, key))
+      return { allOutputs: looksLikeState ? { ...state.allOutputs, ...Object.fromEntries(knownOutputs.filter((key) => output[key] !== undefined).map((key) => [key, output[key]])) } : { ...state.allOutputs, [step]: output } }
+    }),
   setConnected: (isConnected) => set({ isConnected }),
   setLoading: (isLoading) => set({ isLoading }),
   setError: (error) => set({ error }),

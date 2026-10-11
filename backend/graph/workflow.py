@@ -105,35 +105,40 @@ async def run_workflow(idea: str, config: dict) -> AsyncGenerator[str, None]:
     }
 
     workflow = build_workflow()
-    stream_config = {"configurable": config or {}}
+    stream_config = {"configurable": {"session_id": state.get("session_id", "")}}
 
-    async for event in workflow.astream_events(state, config=stream_config, version="v2"):
-        name = event.get("name", "workflow")
-        if name not in {
-            "market_research",
-            "critic_after_market_research",
-            "business_planner",
-            "critic_after_business_planner",
-            "technical_architect",
-            "critic_after_technical_architect",
-            "code_generator",
-            "code_sandbox",
-            "forecasting",
-            "knowledge",
-            "deployment",
-        }:
-            continue
+    def next_step(name: str) -> str | None:
+        if name == "market_research":
+            return "critic_after_market_research"
+        if name == "critic_after_market_research":
+            return "market_research" if _route_after_critic("market_research")(state) == "market_research" else "business_planner"
+        if name == "business_planner":
+            return "critic_after_business_planner"
+        if name == "critic_after_business_planner":
+            return "business_planner" if _route_after_critic("business_planner")(state) == "business_planner" else "technical_architect"
+        if name == "technical_architect":
+            return "critic_after_technical_architect"
+        if name == "critic_after_technical_architect":
+            return "technical_architect" if _route_after_critic("technical_architect")(state) == "technical_architect" else "code_generator"
+        return {"code_generator": "code_sandbox", "code_sandbox": "forecasting", "forecasting": "knowledge", "knowledge": "deployment"}.get(name)
 
-        event_type = event.get("event", "")
-        if event_type.endswith("start"):
-            payload = {
-                "step": name,
-                "status": "running",
-                "output": event.get("data", {}).get("input", {}) or {},
-            }
-        else:
-            output = event.get("data", {}).get("output", {})
+    state.setdefault("step_status", {})["market_research"] = "running"
+    from memory.redis_client import set_state
+    set_state(state.get("session_id", ""), state)
+    yield json.dumps({"step": "market_research", "status": "running", "output": {}}, ensure_ascii=False)
+    async for update in workflow.astream(state, config=stream_config, stream_mode="updates"):
+        for name, output in update.items():
             if not isinstance(output, dict):
-                output = {"value": output}
-            payload = {"step": name, "status": "done", "output": output}
-        yield json.dumps(payload, ensure_ascii=False)
+                continue
+            state.update(output)
+            step_status = output.get("step_status", {})
+            state.setdefault("step_status", {})[name] = step_status.get(name, "done")
+            set_state(state.get("session_id", ""), state)
+            yield json.dumps(
+                {"step": name, "status": state["step_status"][name], "output": output}, ensure_ascii=False, default=str
+            )
+            following = next_step(name)
+            if following:
+                state["step_status"][following] = "running"
+                set_state(state.get("session_id", ""), state)
+                yield json.dumps({"step": following, "status": "running", "output": {}}, ensure_ascii=False)

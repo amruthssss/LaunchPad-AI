@@ -3,7 +3,7 @@ import { useState } from 'react'
 import useStartupStore from '../store/startupStore'
 
 const actions = [
-  { key: 'github', label: 'Push to GitHub', endpoint: '/api/automation/github' },
+  { key: 'github', label: 'Create GitHub repository', endpoint: '/api/automation/github' },
   { key: 'notion', label: 'Export to Notion', endpoint: '/api/automation/notion' },
   { key: 'email', label: 'Send Email Report', endpoint: '/api/automation/email' },
   { key: 'slack', label: 'Post to Slack', endpoint: '/api/automation/slack' },
@@ -29,15 +29,25 @@ export default function AutomationPanel() {
     setToast(null)
 
     try {
-      const response = await fetch(`${action.endpoint}/${sessionId}`, {
+      const idea = JSON.parse(sessionStorage.getItem(`startup:${sessionId}`) || '{}').idea || 'LaunchPad startup plan'
+      const recipient = action.key === 'email' ? window.prompt('Email address for the report:') : null
+      if (action.key === 'email' && !recipient) return
+      const payload = action.key === 'github'
+        ? { name: idea.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90) || 'launchpad-startup' }
+        : action.key === 'notion'
+          ? { title: `${idea} — LaunchPad plan` }
+          : action.key === 'email'
+            ? { recipient, subject: `Launch plan: ${idea}`, body: `Your LaunchPad AI workspace is ready.\n\nIdea: ${idea}\nSession: ${sessionId}\n\nOpen the project dashboard to review your market research, business plan, product architecture, and forecast.` }
+            : { channel: '#general', text: `Launch plan ready: ${idea}\nSession: ${sessionId}` }
+      const response = await fetch(action.endpoint, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       })
 
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`)
-      }
-
-      setToast({ type: 'success', message: `${action.label} completed successfully.` })
+      const result = await response.json()
+      if (!response.ok || result.status === 'error') throw new Error(result.message || `Request failed with status ${response.status}`)
+      setToast({ type: result.status === 'completed' ? 'success' : 'error', message: result.message || result.url || (result.status === 'not_configured' ? 'Add the integration credentials to your .env file first.' : `${action.label} complete.`) })
     } catch (error) {
       setToast({ type: 'error', message: error.message || `${action.label} failed.` })
     } finally {

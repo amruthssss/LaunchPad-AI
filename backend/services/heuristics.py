@@ -63,6 +63,8 @@ def normalize_key(value: str) -> str:
 
 def get_market_profile(industry: str) -> MarketProfile:
     key = normalize_key(industry)
+    aliases = {"technology": "saas", "healthcare": "healthtech", "finance": "fintech", "financialservices": "fintech", "education": "edtech"}
+    key = aliases.get(key, key)
     return MARKET_MAP.get(key, MARKET_MAP["default"])
 
 

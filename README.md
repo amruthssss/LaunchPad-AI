@@ -1,215 +1,92 @@
-<div align="center">
+# LaunchPad AI
 
-<img src="https://readme-typing-svg.demolab.com?font=Fira+Code&size=32&pause=1000&color=6366F1&center=true&vCenter=true&width=600&lines=LaunchPad+AI;Idea+%E2%86%92+Market+Research;Idea+%E2%86%92+Business+Plan;Idea+%E2%86%92+Code+%2B+Deployment;All+Streamed+Live+%F0%9F%9A%80" alt="Typing SVG" />
+LaunchPad AI turns a startup idea into a practical first-pass launch plan. A live agent workflow researches the category, shapes a business model, drafts a product architecture and starter code, builds a directional forecast, and prepares a deployment checklist. Progress streams to an animated React dashboard over WebSockets.
 
-### Turn a startup idea into a market analysis, business plan, architecture, code, and forecast — orchestrated by a live LangGraph agent pipeline.
+The project runs locally without API keys. Built-in research and planning heuristics provide starter outputs; adding an OpenAI key enables an AI-generated research brief. Market figures and forecasts are directional assumptions, not sourced market reports.
 
-<br/>
+## What you get
 
-![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
-![LangGraph](https://img.shields.io/badge/LangGraph-1C3C3C?style=for-the-badge&logo=langchain&logoColor=white)
-![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=for-the-badge&logo=vite&logoColor=white)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white)
-![Redis](https://img.shields.io/badge/Redis-DC382D?style=for-the-badge&logo=redis&logoColor=white)
-![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+- Responsive, animated React 18 and Vite interface with live progress, research, business plan, architecture, code, and forecast panels.
+- FastAPI API with session history, report retrieval, PDF text ingestion, and WebSocket updates.
+- LangGraph stages for market research, business planning, architecture, code generation, syntax validation, forecasting, knowledge retrieval, and deployment planning.
+- SQLite and in-memory session defaults for local development. PostgreSQL and Redis are optional.
+- Optional OpenAI research enrichment with `OPENAI_API_KEY`.
 
-![GitHub last commit](https://img.shields.io/github/last-commit/amruthssss/LaunchPad-AI?style=flat-square&color=6366F1)
-![GitHub repo size](https://img.shields.io/github/repo-size/amruthssss/LaunchPad-AI?style=flat-square&color=6366F1)
-![GitHub stars](https://img.shields.io/github/stars/amruthssss/LaunchPad-AI?style=flat-square&color=6366F1)
-![License](https://img.shields.io/badge/license-MIT-6366F1?style=flat-square)
+## Quick start
 
-</div>
+Use Python 3.12+ and Node.js 20+.
 
-<br/>
-
-## ✨ What it does
-
-```
-  💡 idea  ──▶  🔍 Market Research  ──▶  📋 Business Plan  ──▶  🏗️  Architecture
-                                                                      │
-  🚀 Deploy  ◀──  📈 Forecast  ◀──  🧠 Critic Review  ◀──  💻 Code Gen ◀┘
-```
-
-Submit an idea from the dashboard → a **LangGraph** pipeline of specialized agents runs in sequence → every step streams live to the frontend over **WebSockets** → final report is saved to Postgres for later.
-
-<br/>
-
-## 🧰 Tech Stack
-
-<div align="center">
-
-| Layer | Stack |
-|:---|:---|
-| 🔗 **Orchestration** | LangGraph · LangChain · OpenAI · Tavily |
-| ⚙️ **Backend** | FastAPI · WebSockets · SQLAlchemy |
-| 🗄️ **Data** | PostgreSQL · Redis · ChromaDB (RAG) |
-| 📊 **Forecasting** | Prophet · XGBoost · LightGBM · TensorFlow |
-| 📈 **Tracking** | MLflow |
-| 🎨 **Frontend** | React 18 · Vite · Zustand · Tailwind CSS |
-| 🖼️ **Visuals** | React Flow · Recharts · Mermaid |
-| 📦 **Deploy** | Docker Compose |
-
-</div>
-
-<br/>
-
-## 🗂️ Project Structure
-
-<details>
-<summary><b>Click to expand full tree</b></summary>
-
-```
-LaunchPad-AI/
-├── backend/
-│   ├── main.py                  # FastAPI entrypoint + WebSocket status endpoint
-│   ├── config.py                # Env-driven settings
-│   ├── agents/                  # 🤖 One module per pipeline agent
-│   │   ├── market_research_agent.py
-│   │   ├── business_planner_agent.py
-│   │   ├── technical_architect_agent.py
-│   │   ├── code_generator_agent.py
-│   │   ├── forecasting_agent.py
-│   │   ├── critic_agent.py
-│   │   ├── deployment_agent.py
-│   │   └── knowledge_agent.py
-│   ├── graph/
-│   │   ├── workflow.py          # LangGraph workflow definition
-│   │   └── nodes.py             # Node wiring
-│   ├── api/
-│   │   ├── startup.py           # /api/startup routes
-│   │   └── automation.py        # /api/{github,notion,email,slack}
-│   ├── automation/               # 🔌 3rd-party integrations
-│   ├── db/                       # SQLAlchemy models
-│   ├── memory/                   # Redis session state
-│   ├── rag/                      # ChromaDB ingestion + retrieval
-│   ├── forecasting/               # Forecasting engine
-│   ├── monitoring/                # MLflow hooks
-│   ├── models/                    # Pydantic schemas
-│   ├── requirements.txt
-│   └── Dockerfile
-├── frontend/
-│   ├── src/
-│   │   ├── pages/                 # Home, Dashboard, History
-│   │   ├── components/            # Graph view, cards, charts, tabs
-│   │   ├── hooks/                 # useStartup, useWebSocket
-│   │   ├── store/                 # Zustand store
-│   │   └── main.jsx / App.jsx
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   └── Dockerfile
-├── docker-compose.yml
-├── .env.example
-└── README.md
-```
-
-</details>
-
-<br/>
-
-## ⚡ Quick Start
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-### 🐳 With Docker (recommended)
-
-```bash
-git clone https://github.com/amruthssss/LaunchPad-AI
-cd LaunchPad-AI
-cp .env.example .env
-# fill in your API keys
-docker compose up --build
-```
-
-</td>
-<td width="50%" valign="top">
-
-### 🛠️ Without Docker
-
-```bash
-# backend
+```powershell
+# Terminal 1 — API
 cd backend
 python -m venv .venv
-.venv\Scripts\activate
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 uvicorn main:app --reload
 
-# frontend (new terminal)
+# Terminal 2 — frontend
 cd frontend
 npm install
 npm run dev
 ```
 
-</td>
-</tr>
-</table>
+Open [http://localhost:5173](http://localhost:5173). The API is at [http://localhost:8000](http://localhost:8000), with interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-<div align="center">
+The API uses `backend/launchpad.db` and in-memory session storage by default. Set `OPENAI_API_KEY` in your environment to enable the AI research brief. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
 
-| Service | URL |
-|:---|:---|
-| 🎨 Frontend | http://localhost:5173 |
-| ⚙️ API | http://localhost:8000 |
-| 📈 MLflow | http://localhost:5000 |
-| 🗄️ ChromaDB | http://localhost:8001 |
+## Workflow
 
-</div>
+```text
+Idea → Market research → Critic review → Business plan → Critic review
+     → Architecture → Critic review → Code generation → Syntax validation
+     → Forecast → Knowledge context → Deployment checklist
+```
 
-<br/>
+Sessions and reports are saved in the configured database. With local defaults, live session state lasts for the life of the API process; database history remains available across restarts.
 
-## 🔑 Environment Variables
+## Configuration
 
-> ⚠️ Copy `.env.example` → `.env` and fill in your own values. **Never commit `.env`.**
+Copy `.env.example` to `backend/.env` for optional settings. The API loads `.env` from its working directory.
 
 | Variable | Purpose |
-|:---|:---|
-| `OPENAI_API_KEY` | Powers the LLM agents |
-| `TAVILY_API_KEY` | Web search for market research |
-| `DATABASE_URL` | Postgres connection |
-| `REDIS_URL` | Session state store |
-| `CHROMADB_HOST` | Vector store for RAG |
-| `GITHUB_TOKEN` | GitHub automation |
-| `NOTION_TOKEN` | Notion automation |
-| `SLACK_WEBHOOK_URL` | Slack automation |
-| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` | Email automation |
-| `MLFLOW_TRACKING_URI` | Experiment tracking |
+| --- | --- |
+| `OPENAI_API_KEY` | Optional AI-generated research brief |
+| `DATABASE_URL` | SQLAlchemy database URL; defaults to SQLite |
+| `REDIS_URL` | Optional Redis session storage; falls back to memory |
+| `CORS_ORIGINS` | Comma-separated allowed browser origins |
+| `GITHUB_TOKEN` | GitHub repository creation |
+| `NOTION_TOKEN`, `NOTION_PARENT_PAGE_ID` | Notion page export |
+| `SLACK_WEBHOOK_URL` | Slack message delivery |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Email delivery |
 
-<br/>
+Never commit real secrets or `.env` files.
 
-## 📡 API Reference
+## API
 
 | Method | Endpoint | Description |
-|:---|:---|:---|
-| `POST` | `/api/startup/generate` | Start a new session |
-| `GET` | `/api/startup/{id}/status` | Poll agent progress |
-| `WS` | `/ws/{id}` | Live agent event stream |
-| `POST` | `/api/startup/{id}/upload-pdf` | Ingest a PDF into RAG |
-| `GET` | `/api/startup/{id}/report` | Final compiled report |
-| `GET` | `/api/startup/history` | List past sessions |
-| `POST` | `/api/github` `/api/notion` `/api/email` `/api/slack` | Automations |
+| --- | --- | --- |
+| `POST` | `/api/startup/generate` | Create a startup session |
+| `GET` | `/api/startup/{session_id}/status` | Read stage status and outputs |
+| `GET` | `/api/startup/{session_id}/report` | Retrieve the saved report |
+| `POST` | `/api/startup/{session_id}/upload-pdf` | Extract and index PDF text for the session |
+| `GET` | `/api/startup/history` | List saved sessions |
+| `WS` | `/ws/{session_id}` | Stream workflow progress and outputs |
+| `POST` | `/api/automation/github` | Create a private GitHub repository |
+| `POST` | `/api/automation/notion` | Create a Notion page |
+| `POST` | `/api/automation/email` | Send a report email |
+| `POST` | `/api/automation/slack` | Send a Slack message |
 
-<br/>
+## Project layout
 
-## 🛣️ Status
+```text
+backend/       FastAPI API, workflow, agents, storage, and forecasting
+frontend/      React + Vite animated application
+.env.example   Optional local configuration
+```
 
-<div align="center">
+## Notes
 
-![Progress](https://img.shields.io/badge/pipeline_structure-done-brightgreen?style=for-the-badge)
-![Progress](https://img.shields.io/badge/agent_logic-in_progress-yellow?style=for-the-badge)
-![Progress](https://img.shields.io/badge/persistence-in_progress-yellow?style=for-the-badge)
-
-</div>
-
-Active scaffold — pipeline structure, API surface, and dashboard UI are in place; agent logic and persistence are being filled in incrementally. Contributions welcome!
-
-<br/>
-
-<div align="center">
-
-**⭐ Star this repo if you find it useful!**
-
-</div>
+- Local heuristics are used when model credentials are missing or unavailable.
+- PDF text is indexed in memory for the active API process.
+- Configure the credentials for an integration before using its dashboard action.
+- SQLite database files are created under the backend directory and are excluded from Git.

@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react'
 
-import Dashboard from './pages/Dashboard'
-import History from './pages/History'
-import Home from './pages/Home'
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const History = lazy(() => import('./pages/History'))
+const Home = lazy(() => import('./pages/Home'))
 
 function usePathname() {
   const [pathname, setPathname] = useState(window.location.pathname)
@@ -31,5 +31,7 @@ export default function App() {
     return <Home />
   }, [pathname])
 
-  return <main>{page}</main>
+  return <main key={pathname} className="animate-in"><Suspense fallback={<div className="min-h-screen bg-slate-950" aria-label="Loading page" />}>
+    {page}
+  </Suspense></main>
 }

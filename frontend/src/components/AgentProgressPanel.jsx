@@ -7,10 +7,13 @@ const steps = [
   { key: 'business_planner', label: 'Business Planning' },
   { key: 'technical_architect', label: 'Technical Architecture' },
   { key: 'code_generator', label: 'Code Generation' },
+  { key: 'code_sandbox', label: 'Code Syntax Check' },
   { key: 'forecasting', label: 'Forecasting' },
   { key: 'knowledge', label: 'Knowledge Base' },
   { key: 'deployment', label: 'Deployment' },
   { key: 'critic_after_market_research', label: 'Critic Review' },
+  { key: 'critic_after_business_planner', label: 'Plan Review' },
+  { key: 'critic_after_technical_architect', label: 'Architecture Review' },
 ]
 
 function StatusIcon({ status }) {
