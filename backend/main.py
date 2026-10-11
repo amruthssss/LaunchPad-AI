@@ -108,5 +108,5 @@ async def websocket_status(websocket: WebSocket, session_id: str) -> None:
     except WebSocketDisconnect:
         workflow_task.cancel()
     finally:
-        if websocket.client_state.name != "DISCONNECTED":
+        if websocket.application_state.name != "DISCONNECTED":
             await websocket.close()

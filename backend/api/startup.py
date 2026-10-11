@@ -135,6 +135,7 @@ async def history(db: Session = Depends(get_db)) -> list[StartupHistoryItem]:
         StartupHistoryItem(
             id=str(session.id),
             idea=session.idea,
+            industry=session.industry,
             status=session.status,
             created_at=session.created_at,
         )

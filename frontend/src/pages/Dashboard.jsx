@@ -21,6 +21,7 @@ export default function Dashboard() {
   const setError = useStartupStore((state) => state.setError)
   const resetStore = useStartupStore((state) => state.resetStore)
   const isLoading = useStartupStore((state) => state.isLoading)
+  const workflowStatus = useStartupStore((state) => state.stepStatus.workflow)
 
   const sessionState = sessionId ? JSON.parse(sessionStorage.getItem(`startup:${sessionId}`) || '{}') : {}
   const [sessionIdea, setSessionIdea] = useState(sessionState.idea || 'Untitled startup')
@@ -74,7 +75,9 @@ export default function Dashboard() {
             <div className="rounded-2xl border border-white/10 bg-slate-950/70 px-4 py-3 text-sm text-slate-300">
               <p className="font-semibold text-white">Session ID</p>
               <p className="break-all text-xs text-slate-400">{sessionId}</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.3em] text-cyan-300">{isConnected ? 'Connected' : 'Disconnected'}</p>
+              <p className={`mt-2 text-xs uppercase tracking-[0.3em] ${workflowStatus === 'completed' ? 'text-emerald-300' : workflowStatus === 'failed' ? 'text-rose-300' : 'text-cyan-300'}`}>
+                {workflowStatus === 'completed' ? 'Plan ready' : workflowStatus === 'failed' ? 'Needs attention' : isConnected ? 'Connected' : 'Connecting…'}
+              </p>
               {isLoading ? <p className="mt-1 text-xs text-slate-400">Loading...</p> : null}
             </div>
           </div>

@@ -26,5 +26,6 @@ class StartupStatusResponse(BaseModel):
 class StartupHistoryItem(BaseModel):
     id: str
     idea: str
+    industry: str = ""
     status: str
     created_at: datetime
