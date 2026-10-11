@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { FiArrowDownRight, FiArrowRight, FiCheck, FiCommand, FiLayers, FiPlay, FiRadio, FiZap } from 'react-icons/fi'
 import useStartupStore from '../store/startupStore'
+import { apiUrl } from '../lib/api'
 
 const industries = ['Technology', 'Healthcare', 'Fintech', 'Education', 'E-commerce', 'Climate', 'Other']
 const models = ['SaaS', 'Marketplace', 'Freemium', 'Enterprise', 'D2C', 'Usage-based']
@@ -29,7 +30,7 @@ export default function Home() {
     setLoading(true)
     setError(null)
     try {
-      const response = await fetch('/api/startup/generate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const response = await fetch(apiUrl('/api/startup/generate'), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
       const data = await response.json()
       if (!response.ok) throw new Error(data.detail || 'Could not start your launch plan.')
       setSessionId(data.session_id)

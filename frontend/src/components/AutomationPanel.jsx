@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
 import useStartupStore from '../store/startupStore'
+import { apiUrl } from '../lib/api'
 
 const actions = [
   { key: 'github', label: 'Create GitHub repository', endpoint: '/api/automation/github' },
@@ -39,7 +40,7 @@ export default function AutomationPanel() {
           : action.key === 'email'
             ? { recipient, subject: `Launch plan: ${idea}`, body: `Your LaunchPad AI workspace is ready.\n\nIdea: ${idea}\nSession: ${sessionId}\n\nOpen the project dashboard to review your market research, business plan, product architecture, and forecast.` }
             : { channel: '#general', text: `Launch plan ready: ${idea}\nSession: ${sessionId}` }
-      const response = await fetch(action.endpoint, {
+      const response = await fetch(apiUrl(action.endpoint), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

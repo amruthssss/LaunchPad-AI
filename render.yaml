@@ -1,0 +1,33 @@
+services:
+  - type: web
+    name: launchpad-ai-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /
+    envVars:
+      - key: DATABASE_URL
+        value: sqlite:///./launchpad.db
+      - key: CORS_ORIGINS
+        fromService:
+          type: web
+          name: launchpad-ai-web
+          envVarKey: RENDER_EXTERNAL_URL
+  - type: web
+    name: launchpad-ai-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          type: web
+          name: launchpad-ai-api
+          envVarKey: RENDER_EXTERNAL_URL
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

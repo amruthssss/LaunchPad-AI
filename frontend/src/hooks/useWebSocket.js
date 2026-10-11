@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 import useStartupStore from '../store/startupStore'
+import { websocketUrl } from '../lib/api'
 
 export default function useWebSocket(sessionId) {
   const socketRef = useRef(null)
@@ -14,8 +15,7 @@ export default function useWebSocket(sessionId) {
       return undefined
     }
 
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const socket = new WebSocket(`${wsProtocol}//${window.location.host}/ws/${sessionId}`)
+    const socket = new WebSocket(websocketUrl(`/ws/${sessionId}`))
     socketRef.current = socket
 
     socket.onopen = () => {

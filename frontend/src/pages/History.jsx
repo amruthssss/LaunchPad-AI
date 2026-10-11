@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { FiArrowLeft, FiArrowRight, FiClock, FiZap } from 'react-icons/fi'
+import { apiUrl } from '../lib/api'
 
 function navigateTo(pathname) {
   window.history.pushState({}, '', pathname)
@@ -12,7 +13,7 @@ export default function History() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    fetch('/api/startup/history')
+    fetch(apiUrl('/api/startup/history'))
       .then(async (response) => {
         const data = await response.json()
         if (!response.ok) throw new Error(data.detail || 'Could not load your saved ideas.')

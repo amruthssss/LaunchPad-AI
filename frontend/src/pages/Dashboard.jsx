@@ -5,6 +5,7 @@ import AutomationPanel from '../components/AutomationPanel'
 import OutputTabs from '../components/OutputTabs'
 import useWebSocket from '../hooks/useWebSocket'
 import useStartupStore from '../store/startupStore'
+import { apiUrl } from '../lib/api'
 import { FiArrowLeft, FiClock } from 'react-icons/fi'
 
 const AgentGraphView = lazy(() => import('../components/AgentGraphView'))
@@ -32,7 +33,7 @@ export default function Dashboard() {
     setSessionId(sessionId)
     setLoading(true)
 
-    fetch(`/api/startup/${sessionId}/status`)
+    fetch(apiUrl(`/api/startup/${sessionId}/status`))
       .then((response) => {
         if (!response.ok) {
           throw new Error(`Request failed with status ${response.status}`)
