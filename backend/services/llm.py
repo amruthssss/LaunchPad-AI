@@ -24,67 +24,81 @@ def openrouter_market_research(
         return None
 
     prompt = _market_research_prompt(idea, industry, audience, country, business_model)
-    try:
-        response = httpx.post(
-            "https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {settings.openrouter_api_key}",
-                "Content-Type": "application/json",
-                "X-Title": "LaunchPad AI",
-            },
-            json={
-                "model": settings.openrouter_model,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a careful startup research assistant without live web search. "
-                            "Return a valid JSON object only. Do not claim to have verified current facts; "
-                            "do not invent sources, citations, numbers, or dates. Mark uncertain competitor fit, "
-                            "market trends, and customer problems as hypotheses. If reliable market-size evidence "
-                            "is unavailable, say so."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                "reasoning": {"enabled": True},
-                "temperature": 0.2,
-            },
-            timeout=90,
-            verify=_SYSTEM_SSL_CONTEXT,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        choices = payload.get("choices") or []
-        text = ((choices[0].get("message") or {}).get("content") or "") if choices else ""
-        if not text.strip():
-            return _unavailable("OpenRouter returned an empty response.")
+    text = ""
+    for reasoning_enabled in (True, False):
+        try:
+            response = httpx.post(
+                "https://openrouter.ai/api/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {settings.openrouter_api_key}",
+                    "Content-Type": "application/json",
+                    "X-Title": "LaunchPad AI",
+                },
+                json={
+                    "model": settings.openrouter_model,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a careful startup research assistant without live web search. "
+                                "Return a valid JSON object only. Do not claim to have verified current facts; "
+                                "do not invent sources, citations, numbers, or dates. Mark uncertain competitor fit, "
+                                "market trends, and customer problems as hypotheses. If reliable market-size evidence "
+                                "is unavailable, say so."
+                            ),
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    "reasoning": {"enabled": reasoning_enabled},
+                    "temperature": 0.2,
+                },
+                timeout=90,
+                verify=_SYSTEM_SSL_CONTEXT,
+            )
+            response.raise_for_status()
+            payload = response.json()
+            text = _completion_text(payload)
+            if text:
+                break
 
-        result = _parse_json_object(text)
-        return {
-            "research_brief": str(result.get("research_brief") or text),
-            "market_size": str(result.get("market_size") or "No reliable market-size estimate was returned."),
-            "competitors": _string_list(result.get("competitors")),
-            "trends": _string_list(result.get("trends")),
-            "customer_problems": _string_list(result.get("customer_problems")),
-            "sources": [],
-            "search_queries": [],
-            "research_status": "ungrounded",
-            "research_provider": "OpenRouter · NVIDIA Nemotron",
-            "research_error": (
-                "This OpenRouter answer is AI-generated without live web citations. "
-                "OpenRouter's free NVIDIA endpoint says request data may be logged and used to improve its products; "
-                "avoid submitting confidential or personal information. Verify all generated claims."
-            ),
-        }
-    except httpx.HTTPStatusError as exc:
-        logger.warning("OpenRouter market research returned HTTP %s", exc.response.status_code)
+            # Some reasoning-capable provider responses contain no user-facing
+            # completion. Retry once with reasoning disabled before falling back.
+            logger.warning(
+                "OpenRouter returned no completion text (reasoning_enabled=%s, finish_reason=%s); retrying",
+                reasoning_enabled,
+                _finish_reason(payload),
+            )
+        except httpx.HTTPStatusError as exc:
+            logger.warning("OpenRouter market research returned HTTP %s", exc.response.status_code)
+            return _unavailable(
+                f"OpenRouter returned HTTP {exc.response.status_code}; check the API key, free-model limits, and provider availability."
+            )
+        except (httpx.HTTPError, ValueError, TypeError) as exc:
+            logger.warning("OpenRouter market research failed (%s)", type(exc).__name__)
+            return _unavailable(f"OpenRouter request failed ({type(exc).__name__}).")
+
+    if not text:
         return _unavailable(
-            f"OpenRouter returned HTTP {exc.response.status_code}; check the API key, free-model limits, and provider availability."
+            "OpenRouter returned no answer after retrying without reasoning. Try again later; showing industry heuristics."
         )
-    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
-        logger.warning("OpenRouter market research failed (%s)", type(exc).__name__)
-        return _unavailable(f"OpenRouter request failed ({type(exc).__name__}).")
+
+    result = _parse_json_object(text)
+    return {
+        "research_brief": str(result.get("research_brief") or text),
+        "market_size": str(result.get("market_size") or "No reliable market-size estimate was returned."),
+        "competitors": _string_list(result.get("competitors")),
+        "trends": _string_list(result.get("trends")),
+        "customer_problems": _string_list(result.get("customer_problems")),
+        "sources": [],
+        "search_queries": [],
+        "research_status": "ungrounded",
+        "research_provider": "OpenRouter · NVIDIA Nemotron",
+        "research_error": (
+            "This OpenRouter answer is AI-generated without live web citations. "
+            "OpenRouter's free NVIDIA endpoint says request data may be logged and used to improve its products; "
+            "avoid submitting confidential or personal information. Verify all generated claims."
+        ),
+    }
 
 
 def _unavailable(message: str) -> dict:
@@ -93,6 +107,26 @@ def _unavailable(message: str) -> dict:
         "research_provider": "OpenRouter · NVIDIA Nemotron",
         "research_error": message,
     }
+
+
+def _completion_text(payload: dict) -> str:
+    choices = payload.get("choices") or []
+    message = (choices[0].get("message") or {}) if choices else {}
+    content = message.get("content")
+    if isinstance(content, str):
+        return content.strip()
+    if isinstance(content, list):
+        return "\n".join(
+            part["text"].strip()
+            for part in content
+            if isinstance(part, dict) and isinstance(part.get("text"), str) and part["text"].strip()
+        )
+    return ""
+
+
+def _finish_reason(payload: dict) -> str:
+    choices = payload.get("choices") or []
+    return str(choices[0].get("finish_reason") or "unknown") if choices else "no_choices"
 
 
 def _market_research_prompt(idea: str, industry: str, audience: str, country: str, business_model: str) -> str:
