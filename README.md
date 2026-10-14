@@ -2,7 +2,7 @@
 
 LaunchPad AI turns a startup idea into a practical first-pass launch plan. A live agent workflow researches the category, shapes a business model, drafts a product architecture and starter code, builds a directional forecast, and prepares a deployment checklist. Progress streams to an animated React dashboard over WebSockets.
 
-The project runs locally without API keys. Built-in heuristics provide starter outputs; adding a Gemini API key enables idea-specific research grounded in Google Search. OpenRouter with NVIDIA Nemotron is an AI-only fallback when Gemini is unavailable. Fallback results are clearly marked uncited. Market sizing and forecasts remain directional estimates unless a sourced estimate is explicitly returned.
+The project runs locally without API keys. Built-in heuristics provide starter outputs; `OPENROUTER_API_KEY` enables idea-specific AI research. OpenRouter responses do not include live web citations. Market sizing and forecasts remain directional estimates and should be verified before making decisions.
 
 ## What you get
 
@@ -10,9 +10,8 @@ The project runs locally without API keys. Built-in heuristics provide starter o
 - FastAPI API with session history, report retrieval, PDF text ingestion, and WebSocket updates.
 - LangGraph stages for market research, business planning, architecture, code generation, syntax validation, forecasting, knowledge retrieval, and deployment planning.
 - SQLite and in-memory session defaults for local development. PostgreSQL and Redis are optional.
-- Google Search-grounded market research with Gemini's Interactions API and `GEMINI_API_KEY` (recommended).
-- OpenRouter Nemotron reasoning fallback with `OPENROUTER_API_KEY`.
-- Optional OpenAI research brief fallback with `OPENAI_API_KEY`.
+- OpenRouter Nemotron reasoning for idea-specific research with `OPENROUTER_API_KEY`.
+- Heuristic research when OpenRouter is not configured or unavailable.
 
 ## Quick start
 
@@ -34,7 +33,7 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173). The API is at [http://localhost:8000](http://localhost:8000), with interactive docs at [http://localhost:8000/docs](http://localhost:8000/docs).
 
-The API uses `backend/launchpad.db` and in-memory session storage by default. Set `GEMINI_API_KEY` in `backend/.env` to enable Google Search-grounded research; the default model is `gemini-3.6-flash`. The integration uses Gemini's Interactions API and disables server-side interaction storage. Google Search grounding requires a Google API tier that supports grounding. On Gemini quota or service errors, the app retries without Search, then uses OpenRouter when configured. Set `OPENROUTER_API_KEY` to enable the uncited model fallback; `OPENROUTER_MODEL` defaults to `nvidia/nemotron-3-ultra-550b-a55b:free`. The free NVIDIA endpoint states that requests may be logged and used to improve its products, so avoid sending confidential or personal data to that fallback. All uncited outputs are labeled and should be verified. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
+The API uses `backend/launchpad.db` and in-memory session storage by default. Set `OPENROUTER_API_KEY` in `backend/.env` to enable AI-generated research; `OPENROUTER_MODEL` defaults to `nvidia/nemotron-3-ultra-550b-a55b:free`. OpenRouter responses have no live web citations, so generated claims should be verified. OpenRouter's free NVIDIA endpoint says request data may be logged and used to improve its products; avoid sending confidential or personal data. If OpenRouter is missing or unavailable, the app displays directional industry heuristics. To use PostgreSQL or Redis, set `DATABASE_URL` and `REDIS_URL` before starting the API.
 
 ## Workflow
 
@@ -52,11 +51,8 @@ Copy `.env.example` to `backend/.env` for optional settings. The API loads `.env
 
 | Variable | Purpose |
 | --- | --- |
-| `GEMINI_API_KEY` | Google Search-grounded, idea-specific market research |
-| `GEMINI_MODEL` | Gemini model; defaults to `gemini-3.6-flash` |
-| `OPENROUTER_API_KEY` | OpenRouter fallback research; free Nemotron responses are uncited |
+| `OPENROUTER_API_KEY` | OpenRouter AI-generated research; responses have no live web citations |
 | `OPENROUTER_MODEL` | OpenRouter model; defaults to `nvidia/nemotron-3-ultra-550b-a55b:free` |
-| `OPENAI_API_KEY` | Optional fallback AI-generated research brief |
 | `DATABASE_URL` | SQLAlchemy database URL; defaults to SQLite |
 | `REDIS_URL` | Optional Redis session storage; falls back to memory |
 | `CORS_ORIGINS` | Comma-separated allowed browser origins |
