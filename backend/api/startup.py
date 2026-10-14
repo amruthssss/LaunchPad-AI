@@ -71,16 +71,19 @@ async def generate_startup(request: StartupGenerateRequest, db: Session = Depend
 
 @router.get("/{session_id}/status", response_model=StartupStatusResponse)
 async def get_status(session_id: str, db: Session = Depends(get_db)) -> StartupStatusResponse:
-    state = get_state(session_id)
+    try:
+        row = db.query(StartupSession).filter(StartupSession.id == UUID(session_id)).one_or_none()
+    except ValueError:
+        row = None
+
+    # A cached in-memory or Redis state can lag behind the durable final report.
+    # Prefer the completed database snapshot so a page refresh restores all outputs.
+    state = row.final_report if row and row.final_report else get_state(session_id)
     if not state:
-        try:
-            row = db.query(StartupSession).filter(StartupSession.id == UUID(session_id)).one_or_none()
-        except ValueError:
-            row = None
-        state = row.final_report if row and row.final_report else ({**row.config, "session_id": session_id, "step_status": {}} if row else None)
+        state = {**row.config, "session_id": session_id, "step_status": {}} if row else None
         if not state:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Session not found")
-        set_state(session_id, state)
+    set_state(session_id, state)
     return StartupStatusResponse(
         session_id=session_id,
         idea=state.get("idea", ""),

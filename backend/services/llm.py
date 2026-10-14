@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import logging
+import ssl
 
 import httpx
 from openai import OpenAI
@@ -9,6 +10,7 @@ from openai import OpenAI
 from config import settings
 
 logger = logging.getLogger(__name__)
+_SYSTEM_SSL_CONTEXT = ssl.create_default_context()
 
 def optional_completion(system_prompt: str, user_prompt: str) -> str | None:
     """Best-effort OpenAI enrichment; the local heuristic workflow never depends on a key."""
@@ -71,6 +73,7 @@ def grounded_market_research(
             headers={"x-goog-api-key": settings.gemini_api_key},
             json={**request, "tools": [{"type": "google_search"}]},
             timeout=60,
+            verify=_SYSTEM_SSL_CONTEXT,
         )
         search_unavailable_note = ""
         if response.status_code in {429, 503}:
@@ -88,6 +91,7 @@ def grounded_market_research(
                 headers={"x-goog-api-key": settings.gemini_api_key},
                 json=request,
                 timeout=60,
+                verify=_SYSTEM_SSL_CONTEXT,
             )
             search_unavailable_note = (
                 f"Google Search grounding was unavailable (HTTP {search_status}); "
@@ -204,6 +208,7 @@ def _openrouter_market_research(prompt: str, reason: str) -> dict | None:
                 "temperature": 0.2,
             },
             timeout=90,
+            verify=_SYSTEM_SSL_CONTEXT,
         )
         response.raise_for_status()
         payload = response.json()
