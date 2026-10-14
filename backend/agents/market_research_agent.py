@@ -32,13 +32,17 @@ class MarketResearchAgent:
         has_gemini_result = bool(grounded and "research_brief" in grounded)
         research_status = (
             grounded.get("research_status", "ungrounded") if grounded else
-            "not_configured" if not settings.gemini_api_key else "unavailable"
+            "not_configured" if not settings.gemini_api_key and not settings.openrouter_api_key else "unavailable"
         )
         research_error = grounded.get("research_error", "") if grounded else ""
         fallback_brief = (
             f"{research_error} Showing directional industry heuristics instead."
             if research_error else
-            research or "Live web research is not configured. Add GEMINI_API_KEY to get idea-specific research with Google Search sources."
+            research or (
+                "Live web research is not configured. Add GEMINI_API_KEY for Google Search sources."
+                if not settings.gemini_api_key and not settings.openrouter_api_key else
+                "AI research is unavailable. Showing directional industry heuristics instead."
+            )
         )
         state["market_research"] = {
             "competitors": grounded["competitors"] if has_gemini_result and grounded["competitors"] else list(profile.competitors),
@@ -52,6 +56,7 @@ class MarketResearchAgent:
             "sources": grounded.get("sources", []) if grounded else [],
             "search_queries": grounded.get("search_queries", []) if grounded else [],
             "research_status": research_status,
+            "research_provider": grounded.get("research_provider", "") if grounded else "",
             "research_error": research_error,
             "assumptions": ["The displayed TAM is a heuristic directional estimate, not a sourced market figure."],
         }

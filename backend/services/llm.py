@@ -34,20 +34,12 @@ def grounded_market_research(
 ) -> dict | None:
     """Return idea-specific market research grounded in live Google Search results."""
     if not settings.gemini_api_key:
-        return None
+        return _openrouter_market_research(
+            _market_research_prompt(idea, industry, audience, country, business_model),
+            "Gemini is not configured. This OpenRouter answer is AI-generated without live web citations.",
+        )
 
-    prompt = f"""Research this startup idea using Google Search grounding. Search for current, specific evidence; do not reuse generic industry boilerplate.
-
-Startup idea: {idea}
-Industry: {industry}
-Target audience: {audience or 'not specified'}
-Country or region: {country or 'not specified; use globally relevant evidence'}
-Business model: {business_model}
-
-Return only one valid JSON object with these keys:
-{{"research_brief":"2-4 evidence-based sentences tailored to this idea","market_size":"A sourced market-size estimate if credible evidence is available, with geography, date and definition; otherwise say evidence was not found","competitors":["3-6 real direct or adjacent competitors, with a concise differentiator after an em dash"],"trends":["3 current, specific trends relevant to this idea"],"customer_problems":["3 specific pains supported by market evidence or clearly marked as hypotheses"]}}
-
-Rules: distinguish direct competitors from substitutes; prioritize recent, relevant sources and the specified geography; do not invent figures, companies, citations, or dates; say when reliable evidence is unavailable. The UI will show citations from your grounded web results separately."""
+    prompt = _market_research_prompt(idea, industry, audience, country, business_model)
     # Gemini's Interactions API exposes Search steps and citations directly.
     endpoint = "https://generativelanguage.googleapis.com/v1beta/interactions"
     try:
@@ -123,19 +115,7 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
         text = "\n".join(text_parts)
         if not text:
             return None
-        try:
-            result = json.loads(text)
-        except json.JSONDecodeError:
-            # The generateContent + Search endpoint can return fenced JSON or prose.
-            # Parse an embedded object when possible; preserve grounded prose otherwise.
-            start, end = text.find("{"), text.rfind("}")
-            try:
-                result = json.loads(text[start : end + 1]) if start >= 0 and end > start else {"research_brief": text}
-            except json.JSONDecodeError:
-                result = {"research_brief": text}
-        if not isinstance(result, dict):
-            result = {"research_brief": text}
-
+        result = _parse_json_object(text)
         return {
             "research_brief": str(result.get("research_brief", text)),
             "market_size": str(result.get("market_size", "No sourced market-size estimate was returned.")),
@@ -145,6 +125,7 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
             "sources": sources,
             "search_queries": list(dict.fromkeys(search_queries)),
             "research_status": "grounded" if sources else "ungrounded",
+            "research_provider": "Gemini",
             "research_error": search_unavailable_note,
         }
     except httpx.HTTPStatusError as exc:
@@ -162,20 +143,115 @@ Rules: distinguish direct competitors from substitutes; prioritize recent, relev
             provider_message[:500] or "no provider message",
         )
         if status_code == 429:
-            message = "Gemini quota/rate limit reached, or this model is unavailable for the API project's current tier. Check Google AI Studio usage limits."
+            message = "Gemini quota/rate limit reached."
         elif status_code == 404:
-            message = f"Gemini could not find the configured model or API endpoint. Model: {settings.gemini_model}. {provider_message}".strip()
+            message = f"Gemini could not find model {settings.gemini_model}. {provider_message}".strip()
         elif status_code in {401, 403}:
             message = f"Gemini rejected the API key or its permissions (HTTP {status_code}). {provider_message}".strip()
         else:
             message = f"Gemini returned HTTP {status_code}. {provider_message or 'Check the Gemini API configuration.'}".strip()
-        return {"research_status": "unavailable", "research_error": message}
+        return _openrouter_market_research(prompt, f"{message} OpenRouter fallback has no live web citations.") or {
+            "research_status": "unavailable", "research_error": message,
+        }
     except httpx.HTTPError as exc:
         logger.warning("Gemini market research request failed (%s)", type(exc).__name__)
-        return {"research_status": "unavailable", "research_error": f"Gemini request failed ({type(exc).__name__})."}
+        message = f"Gemini request failed ({type(exc).__name__})."
+        return _openrouter_market_research(prompt, f"{message} OpenRouter fallback has no live web citations.") or {
+            "research_status": "unavailable", "research_error": message,
+        }
     except (ValueError, KeyError, IndexError, TypeError) as exc:
         logger.warning("Gemini market research response could not be parsed (%s)", type(exc).__name__)
-        return {"research_status": "unavailable", "research_error": "Gemini returned an invalid response."}
+        message = "Gemini returned an invalid response."
+        return _openrouter_market_research(prompt, f"{message} OpenRouter fallback has no live web citations.") or {
+            "research_status": "unavailable", "research_error": message,
+        }
+
+
+def _market_research_prompt(idea: str, industry: str, audience: str, country: str, business_model: str) -> str:
+    return f"""Research this startup idea with current, specific evidence when web search is available; do not reuse generic industry boilerplate.
+
+Startup idea: {idea}
+Industry: {industry}
+Target audience: {audience or 'not specified'}
+Country or region: {country or 'not specified; use globally relevant evidence'}
+Business model: {business_model}
+
+Return one JSON object with these keys:
+{{"research_brief":"2-4 evidence-based sentences tailored to this idea","market_size":"A sourced market-size estimate if credible evidence is available, with geography, date and definition; otherwise say evidence was not found","competitors":["3-6 real direct or adjacent competitors, with a concise differentiator after an em dash"],"trends":["3 current, specific trends relevant to this idea"],"customer_problems":["3 specific pains supported by market evidence or clearly marked as hypotheses"]}}
+
+Rules: distinguish direct competitors from substitutes; prioritize recent, relevant sources and the specified geography; do not invent figures, companies, citations, or dates; say when reliable evidence is unavailable. The UI will show verified web citations separately."""
+
+
+def _openrouter_market_research(prompt: str, reason: str) -> dict | None:
+    """Use OpenRouter as an explicitly uncited fallback when configured."""
+    if not settings.openrouter_api_key:
+        return None
+    try:
+        response = httpx.post(
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {settings.openrouter_api_key}",
+                "Content-Type": "application/json",
+                "X-Title": "LaunchPad AI",
+            },
+            json={
+                "model": settings.openrouter_model,
+                "messages": [
+                    {"role": "system", "content": "You are a careful startup market research assistant. Return a valid JSON object only. Never fabricate statistics, sources, or market facts; mark uncertain information as a hypothesis."},
+                    {"role": "user", "content": prompt},
+                ],
+                "reasoning": {"enabled": True},
+                "temperature": 0.2,
+            },
+            timeout=90,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        text = payload["choices"][0]["message"].get("content") or ""
+        if not text:
+            return None
+        result = _parse_json_object(text)
+        return {
+            "research_brief": str(result.get("research_brief", text)),
+            "market_size": str(result.get("market_size", "No reliable market-size estimate was returned.")),
+            "competitors": _string_list(result.get("competitors")),
+            "trends": _string_list(result.get("trends")),
+            "customer_problems": _string_list(result.get("customer_problems")),
+            "sources": [],
+            "search_queries": [],
+            "research_status": "ungrounded",
+            "research_provider": "OpenRouter · NVIDIA Nemotron",
+            "research_error": (
+                f"{reason} OpenRouter's free NVIDIA endpoint says request data may be logged and used to improve its products; "
+                "avoid submitting confidential or personal information. Verify all generated claims."
+            ),
+        }
+    except httpx.HTTPStatusError as exc:
+        logger.warning("OpenRouter market research returned HTTP %s", exc.response.status_code)
+        return {
+            "research_status": "unavailable",
+            "research_provider": "OpenRouter · NVIDIA Nemotron",
+            "research_error": f"OpenRouter returned HTTP {exc.response.status_code}; check the API key, free-model limits, and provider availability.",
+        }
+    except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError) as exc:
+        logger.warning("OpenRouter market research failed (%s)", type(exc).__name__)
+        return {
+            "research_status": "unavailable",
+            "research_provider": "OpenRouter · NVIDIA Nemotron",
+            "research_error": f"OpenRouter request failed ({type(exc).__name__}).",
+        }
+
+
+def _parse_json_object(text: str) -> dict:
+    try:
+        result = json.loads(text)
+    except json.JSONDecodeError:
+        start, end = text.find("{"), text.rfind("}")
+        try:
+            result = json.loads(text[start : end + 1]) if start >= 0 and end > start else {}
+        except json.JSONDecodeError:
+            result = {}
+    return result if isinstance(result, dict) else {}
 
 
 def _string_list(value: object) -> list[str]:

@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.6-flash"
+    openrouter_api_key: str = ""
+    openrouter_model: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     database_url: str = "sqlite:///./launchpad.db"
     redis_url: str = ""
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"

@@ -12,11 +12,11 @@ export default function MarketResearchCard() {
   const researchLabel = isGrounded
     ? 'Google Search grounded'
     : marketResearch.research_status === 'ungrounded'
-      ? 'Gemini AI research · no web citations'
+      ? `${marketResearch.research_provider || 'AI'} research · no web citations`
       : marketResearch.research_status === 'unavailable'
         ? 'Gemini unavailable; showing industry heuristics'
         : marketResearch.research_status === 'not_configured'
-          ? 'Gemini not configured; showing industry heuristics'
+          ? 'AI providers not configured; showing industry heuristics'
           : 'Heuristic research; no verified web sources'
 
   return (
